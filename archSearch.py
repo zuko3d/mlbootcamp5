@@ -8,7 +8,7 @@ import time
 import random
 from keras import backend as k
 from keras.models import Sequential
-from keras.layers import Dense, Dropout
+from keras.layers import Dense, Dropout, Convolution1D
 from keras.models import load_model
 from keras import optimizers
 
@@ -16,15 +16,17 @@ import numpy as np
 
 import csv
 
+import modelConfig
+
 # =============== Parameters ==========================
 
-optlist = [ 'rmsprop', 'sgd', 'adam', 'nadam', 'adamax', 'adadelta', 'adagrad' ]
-actlist = [ 'relu', 'tanh', 'sigmoid', 'softplus' ]
+optlist = [ 'adam', 'adamax', 'adadelta', 'adagrad' ]
+actlist = [ 'tanh', 'sigmoid' ]
 totalEpochs = 1000
-fitTime = 600 # seconds
+fitTime = 1 # seconds
 tries = 2 # tries for each config. Getting best try as fitness
 maxLayers = 2
-popsize = 12
+popsize = 8
 ageOfRemoval = 3 # after that many epochs individuum will be removed from population
 
 print("Estimated epoch time: " + str( 0.75 * popsize * fitTime / 60.0) + " minutes")
@@ -33,12 +35,12 @@ print("Estimated epoch time: " + str( 0.75 * popsize * fitTime / 60.0) + " minut
 
 print("Reading dataset...")
 
-fin = open("cleaned_train.csv", 'rt')
+fin = open("cleaned2sigma_train.csv", 'rt')
 reader = csv.reader(fin)
 
 data = [d for d in reader]
 val_data = data[-1000:]
-data = data[:20000]
+data = data[:61000]
 
 fin.close()
 
@@ -81,14 +83,17 @@ def calcFitness(cfg, maxtime = fitTime):
     bestloss = 10.0
 
     for _ in range(tries):
-        model = createNetByConfigs(cfg)
+        model = cfg.createKerasModel()
 
         ls = time.time()
         while time.time() - ls < maxtime / tries:
-            model.fit(  X, targets,
+            p = np.random.permutation(len(X))
+            model.fit(  X[p], targets[p],
                         #validation_data = (val_x, val_y),
                         batch_size=len(X),
-                        epochs=40,
+                        validation_split = 0.05,
+                        shuffle = False,
+                        epochs=10,
                         verbose=0)
 
         history = model.fit(X, targets,
@@ -252,7 +257,11 @@ poscross = 0.0
 
 pop = []
 for _ in range(popsize):
-    cfg = generateConfigForML5()
+    cfg = modelConfig.generateModelConfig()
+
+    print ("**************************")
+    print ("cfg: " + str(cfg))
+
     fitness = calcFitness(cfg)
 
     pop.append((fitness, cfg, 0))
