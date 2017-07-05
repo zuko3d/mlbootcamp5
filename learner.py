@@ -27,18 +27,17 @@ maxLayers = 2
 popsize = 12
 ageOfRemoval = 3 # after that many epochs individuum will be removed from population
 
-print("Estimated epoch time: " + str( 0.75 * popsize * fitTime / 60.0) + " minutes")
-
 # =============== Dataset etc. =======================
 
 print("Reading dataset...")
 
-fin = open("cleaned2sigma_train.csv", 'rt')
+#fin = open("cleaned2sigma_train.csv", 'rt')
+fin = open("cleaned3sigma_train.csv", 'rt')
 reader = csv.reader(fin)
 
 data = [d for d in reader]
 val_data = data[-2000:]
-#data = data[:60000]
+data = data[:-2000]
 
 fin.close()
 
@@ -65,31 +64,44 @@ def createNetByConfigs(cfg):
 
     model.compile(
         loss='binary_crossentropy',
-        optimizer=opt
+        optimizer=opt,
+        metrics = ['accuracy']
     )
 
     return model
 
-cfg = ( [1021, 140, 1], 
+cfg = ( [ 1000, 150, 1 ], 
         ['tanh', 'sigmoid', 'sigmoid'], 
         'adamax', 
-        [-0.20152076744570152, 0.07689980538208308, 0.7510180629883729]
+        [ 0, 0.1, 0.75 ]
       )
 
-model = createNetByConfigs(cfg)
+print("Loading model...")
+#model = createNetByConfigs(cfg)
+model = load_model("models/0.47868_0.527686.h5")
 
-for _ in range(1000):
+for _ in range(100000):
+    ts = time.time()
     p = np.random.permutation(len(X))
     history = model.fit(X[p], targets[p],
             #validation_data = (val_x, val_y),
             validation_split = 0.05,
             shuffle = False,
             batch_size=len(X),
-            epochs=10,
+            epochs=20,
+            verbose=0)
+
+    history = model.fit(X[p], targets[p],
+            validation_data = (val_x, val_y),
+            #validation_split = 0.05,
+            shuffle = False,
+            batch_size=len(X),
+            epochs=5,
             verbose=1)
     
     loss = np.asarray(history.history['loss'], dtype = np.float32).mean()
     val_loss = np.asarray(history.history['val_loss'], dtype = np.float32).mean()
 
-    if val_loss < 0.55 and loss * val_loss < 0.32:
+    if val_loss < 0.53 and loss * val_loss < 0.27:
         model.save("models/" + str(val_loss) + "_" + str(loss) + ".h5")
+    print("Loop time: " + str(time.time() - ts))

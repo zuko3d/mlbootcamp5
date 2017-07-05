@@ -6,7 +6,7 @@ print("Reading dataset...")
 
 csv.register_dialect('semicolon', delimiter=';')
 
-fin = open("train.csv", 'rt')
+fin = open("test2.csv", 'rt')
 reader = csv.reader(fin, dialect='semicolon')
 
 data = [d for d in reader]
@@ -41,7 +41,7 @@ good_targets = []
 for x, y in zip(X, Y):
     good = True
     for i in range(7):
-        if abs(x[i] - mean[i]) > 2 * std[i]:
+        if abs(x[i] - mean[i]) > 3 * std[i]:
             good = False
             break
     if x[4] < x[5]:
@@ -56,7 +56,7 @@ X = np.asarray(good_data, dtype = np.float64)
 
 X = (X - X.min(0)) / X.ptp(0)
 
-fout = open("cleaned2sigma_train.csv", 'w')
+fout = open("test0.5.csv", 'w')
 
 for x, y in zip(X, good_targets):
     for n in x:
